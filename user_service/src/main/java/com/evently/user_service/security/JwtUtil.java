@@ -10,7 +10,7 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private final String SECRET = "mysecretkeymysecretkeymysecretkeymysecretkey";
+    private final String SECRET = "mysecretkeymysecretkeymysecretkeymysecretkeymysecretkeymysecretkey";
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
@@ -18,13 +18,15 @@ public class JwtUtil {
 
     // CREATE TOKEN
     public String generateToken(String email, String role) {
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+        System.out.println("Generated token for: " + email + " with role: " + role);
+        return token;
     }
 
     // EXTRACT EMAIL
@@ -34,17 +36,23 @@ public class JwtUtil {
 
     // EXTRACT ROLE
     public String extractRole(String token) {
-        return parseClaims(token).get("role", String.class);
+        String role = parseClaims(token).get("role", String.class);
+        System.out.println("Extracted role: " + role);
+        return role;
     }
 
     // VALIDATE TOKEN
     public boolean isTokenValid(String token) {
         try {
             parseClaims(token);
+            System.out.println("Token is valid");
             return true;
+        } catch (ExpiredJwtException e) {
+            System.out.println("Token expired: " + e.getMessage());
         } catch (Exception e) {
-            return false;
+            System.out.println("Token invalid: " + e.getMessage());
         }
+        return false;
     }
 
     // COMMON PARSER
