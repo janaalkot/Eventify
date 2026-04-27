@@ -30,7 +30,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
         System.out.println("Request path: " + path);
-        
+
+        // ✅ SKIP LOGIN & REGISTER
+        if (path.equals("/users/login") || path.equals("/users/register")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -40,7 +46,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        System.out.println("Token: " + token.substring(0, Math.min(token.length(), 30)) + "...");
 
         try {
             if (jwtUtil.isTokenValid(token)
@@ -48,27 +53,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String email = jwtUtil.extractEmail(token);
                 String role = jwtUtil.extractRole(token);
-                
-                System.out.println("Email: " + email);
-                System.out.println("Role from token: " + role);
-                
-                // Ensure role is uppercase
-                if (role != null) {
-                    role = role.toUpperCase().trim();
-                    System.out.println("Normalized role: " + role);
-                }
-                
+
+                // normalize role
+                role = role != null ? role.toUpperCase().trim() : "USER";
+
                 UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
+                        new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        );
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                System.out.println("Authentication set with role: ROLE_" + role);
-            } else {
-                System.out.println("Token invalid or authentication already set");
+                System.out.println("Authenticated: " + email + " with role: " + role);
             }
 
         } catch (Exception e) {

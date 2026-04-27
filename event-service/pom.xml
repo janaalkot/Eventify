@@ -102,6 +102,12 @@
             <scope>test</scope>
         </dependency>
         
+        <!--AOP-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Mockito for testing -->
         <dependency>
             <groupId>org.mockito</groupId>

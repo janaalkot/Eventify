@@ -24,26 +24,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http.csrf(csrf -> csrf.disable());
-
-        http.sessionManagement(session ->
+        http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        );
+            )
+            .authorizeHttpRequests(auth -> auth
 
-        http.authorizeHttpRequests(auth -> auth
-            // PUBLIC endpoints - no authentication required
-            .requestMatchers("/users/register", "/users/login").permitAll()
-            
-            // All other /users/** endpoints require authentication
-            .requestMatchers("/users/**").authenticated()
-            
-            // ADMIN ONLY endpoints
-            .requestMatchers("/users/admin/**").hasRole("ADMIN")
-            
-            // Any other request requires authentication
-            .anyRequest().authenticated()
-        );
+                // ✅ PUBLIC ENDPOINTS
+                .requestMatchers("/users/login", "/users/register").permitAll()
 
+                // ✅ ADMIN ONLY
+                .requestMatchers("/users/admin/**").hasRole("ADMIN")
+
+                // ✅ PROTECTED USER ENDPOINTS
+                .requestMatchers("/users/**").authenticated()
+
+                // ✅ ALLOW EVERYTHING ELSE (important)
+                .anyRequest().permitAll()
+            );
+
+        // ✅ ADD JWT FILTER
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

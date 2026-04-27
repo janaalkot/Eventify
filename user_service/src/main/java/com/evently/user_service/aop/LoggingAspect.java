@@ -1,25 +1,44 @@
 package com.evently.user_service.aop;
 
-import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.springframework.stereotype.Component;
-
-import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Aspect
 @Component
 public class LoggingAspect {
     
-    @Before("execution(* com.evently.user_service.Controller.*.*(..))")
-    public void logBefore(JoinPoint joinPoint) {
-        System.out.println("Method called: " + joinPoint.getSignature().getName());
-    }
+    private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
 
-    @After("execution(* com.evently.user_service.Controller.*.*(..))")
-    public void logAfter(JoinPoint joinPoint) {
-        System.out.println("Method finished: " + joinPoint.getSignature().getName());
+    @Around("execution(* com.evently.user_service.controller..*(..))")
+    public Object logRequests(ProceedingJoinPoint joinPoint) throws Throwable {
+        long start = System.currentTimeMillis();
+        
+        logger.info("================ AOP LOG =================");
+        logger.info("🎯 Method: {}", joinPoint.getSignature().toShortString());
+        
+        try {
+            Object result = joinPoint.proceed();
+            long time = System.currentTimeMillis() - start;
+            
+            logger.info("✅ SUCCESS");
+            logger.info("⏱ Execution Time: {} ms", time);
+            logger.info("=========================================");
+            
+            return result;
+            
+        } catch (Exception e) {
+            long time = System.currentTimeMillis() - start;
+            
+            logger.error("❌ ERROR: {} - {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            logger.error("⏱ Execution Time: {} ms", time);
+            logger.error("=========================================");
+            
+            throw e;
+        }
     }
 }

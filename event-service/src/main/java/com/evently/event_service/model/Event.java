@@ -1,11 +1,9 @@
 package com.evently.event_service.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 public class Event {
@@ -18,7 +16,8 @@ public class Event {
     @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
     private String name;
 
-    @NotNull(message = "Date is required") //ensures that the date field is not null, @NotNull can be used with any type of object
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @NotNull(message = "Date is required")
     private LocalDate date;
 
     @NotBlank(message = "Location is required")
