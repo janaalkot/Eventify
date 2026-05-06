@@ -1,0 +1,181 @@
+services:
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    environment:
+      SERVER_PORT: 8761
+      EUREKA_HOSTNAME: eureka-server
+    ports:
+      - "8761:8761"
+
+  auth-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: eventify
+      MYSQL_PASSWORD: eventify
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - auth-db-data:/var/lib/mysql
+
+  event-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: event_db
+      MYSQL_USER: eventify
+      MYSQL_PASSWORD: eventify
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - event-db-data:/var/lib/mysql
+
+  booking-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: booking_db
+      MYSQL_USER: eventify
+      MYSQL_PASSWORD: eventify
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - booking-db-data:/var/lib/mysql
+
+  notification-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: notification_db
+      MYSQL_USER: eventify
+      MYSQL_PASSWORD: eventify
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - notification-db-data:/var/lib/mysql
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: user_service/Dockerfile
+    environment:
+      SERVER_PORT: 8081
+      DB_HOST: auth-db
+      DB_PORT: 3306
+      DB_NAME: auth_db
+      DB_USERNAME: eventify
+      DB_PASSWORD: eventify
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZXZlbnRpZnktZG9ja2VyLWRldi1qd3Qtc2VjcmV0LWZvci1sb2NhbC11c2UtMDEyMzQ1Njc4OTAxMjM0}
+      AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@eventify.local}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-Admin123!}
+      AUTH_BOOTSTRAP_ADMIN_FULL_NAME: ${AUTH_BOOTSTRAP_ADMIN_FULL_NAME:-Eventify Admin}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+
+  event-service:
+    build:
+      context: .
+      dockerfile: event-service/Dockerfile
+    environment:
+      SERVER_PORT: 8082
+      DB_HOST: event-db
+      DB_PORT: 3306
+      DB_NAME: event_db
+      DB_USERNAME: eventify
+      DB_PASSWORD: eventify
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZXZlbnRpZnktZG9ja2VyLWRldi1qd3Qtc2VjcmV0LWZvci1sb2NhbC11c2UtMDEyMzQ1Njc4OTAxMjM0}
+    depends_on:
+      event-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: booking-service/Dockerfile
+    environment:
+      SERVER_PORT: 8083
+      DB_HOST: booking-db
+      DB_PORT: 3306
+      DB_NAME: booking_db
+      DB_USERNAME: eventify
+      DB_PASSWORD: eventify
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZXZlbnRpZnktZG9ja2VyLWRldi1qd3Qtc2VjcmV0LWZvci1sb2NhbC11c2UtMDEyMzQ1Njc4OTAxMjM0}
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+      event-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    environment:
+      SERVER_PORT: 8084
+      DB_HOST: notification-db
+      DB_PORT: 3306
+      DB_NAME: notification_db
+      DB_USERNAME: eventify
+      DB_PASSWORD: eventify
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZXZlbnRpZnktZG9ja2VyLWRldi1qd3Qtc2VjcmV0LWZvci1sb2NhbC11c2UtMDEyMzQ1Njc4OTAxMjM0}
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      SERVER_PORT: 8080
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZXZlbnRpZnktZG9ja2VyLWRldi1qd3Qtc2VjcmV0LWZvci1sb2NhbC11c2UtMDEyMzQ1Njc4OTAxMjM0}
+    depends_on:
+      eureka-server:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+volumes:
+  auth-db-data:
+  event-db-data:
+  booking-db-data:
+  notification-db-data:

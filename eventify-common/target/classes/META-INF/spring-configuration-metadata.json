@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "name": "security.jwt",
+      "type": "com.evently.common.security.JwtProperties",
+      "sourceType": "com.evently.common.security.JwtProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "security.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.evently.common.security.JwtProperties"
+    },
+    {
+      "name": "security.jwt.secret",
+      "type": "java.lang.String",
+      "sourceType": "com.evently.common.security.JwtProperties"
+    }
+  ],
+  "hints": []
+}

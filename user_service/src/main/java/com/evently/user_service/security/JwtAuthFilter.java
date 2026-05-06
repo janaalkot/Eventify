@@ -1,13 +1,17 @@
 package com.evently.user_service.security;
 
+import com.evently.common.security.AuthenticatedUser;
+import com.evently.common.security.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -16,63 +20,37 @@ import java.util.List;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
+    private final JwtService jwtService;
 
-    public JwtAuthFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
+    public JwtAuthFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        System.out.println("Request path: " + path);
-        
-        String authHeader = request.getHeader("Authorization");
+        return path.equals("/auth/register") || path.equals("/auth/login");
+    }
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("No Bearer token found");
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        System.out.println("Token: " + token.substring(0, Math.min(token.length(), 30)) + "...");
-
-        try {
-            if (jwtUtil.isTokenValid(token)
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                String email = jwtUtil.extractEmail(token);
-                String role = jwtUtil.extractRole(token);
-                
-                System.out.println("Email: " + email);
-                System.out.println("Role from token: " + role);
-                
-                // Ensure role is uppercase
-                if (role != null) {
-                    role = role.toUpperCase().trim();
-                    System.out.println("Normalized role: " + role);
-                }
-                
-                UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
-
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                System.out.println("Authentication set with role: ROLE_" + role);
-            } else {
-                System.out.println("Token invalid or authentication already set");
-            }
-
-        } catch (Exception e) {
-            System.out.println("JWT ERROR: " + e.getMessage());
+        if (jwtService.isTokenValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+            AuthenticatedUser authenticatedUser = jwtService.extractUser(token);
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + authenticatedUser.role()))
+            );
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
 
         filterChain.doFilter(request, response);
